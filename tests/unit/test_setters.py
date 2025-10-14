@@ -479,7 +479,9 @@ class TestSettersIntegration:
         mock_bot.set_chat_menu_button.side_effect = Exception("API Error")
 
         # These should raise exceptions (not handled in setters)
-        with pytest.raises(Exception):
+        # The setters functions don't handle exceptions, so they propagate
+        # whatever exception the underlying aiogram methods raise
+        with pytest.raises(Exception):  # noqa: B017
             await set_user_commands_by_flags(
                 mock_bot,
                 user_id=12345,
@@ -488,8 +490,8 @@ class TestSettersIntegration:
                 is_during_registration=False,
             )
 
-        with pytest.raises(Exception):
+        with pytest.raises(Exception):  # noqa: B017
             await clear_user_commands(mock_bot, user_id=12345)
 
-        with pytest.raises(Exception):
+        with pytest.raises(Exception):  # noqa: B017
             await setup_all_command_scopes(mock_bot, languages=("en",))
