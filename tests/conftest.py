@@ -162,7 +162,7 @@ def mock_translator():
 def noop_translator():
     """Create a no-op translator that returns None."""
 
-    def translator(key: str, *, locale: str) -> str:
+    def translator(key: str, *, locale: str) -> str | None:
         return None
 
     return translator
