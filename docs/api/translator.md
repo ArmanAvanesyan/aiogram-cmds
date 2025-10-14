@@ -1,3 +1,32 @@
+## Translator Protocol
+
+`aiogram_cmds.translator.Translator` is a callable used to resolve localized strings.
+
+Signature:
+
+```python
+def __call__(
+    key: str,
+    *,
+    locale: str | None = None,
+    plural: str | None = None,
+    count: int | None = None,
+) -> str | None: ...
+```
+
+- Returns `None` if translation is missing (callers should fallback)
+- `locale` can be omitted to use ambient middleware context
+- When `plural` and `count` are provided, plural form is used (maps to `ngettext`)
+
+### Adapter
+
+```python
+from aiogram_cmds import build_translator_from_i18n
+translator = build_translator_from_i18n(i18n)
+```
+
+The adapter uses `I18n.with_locale(locale)` when `locale` is provided, otherwise `gettext`/`ngettext` use the current context.
+
 # Translator API Reference
 
 This document provides detailed API reference for the translation system and i18n integration in aiogram-cmds.

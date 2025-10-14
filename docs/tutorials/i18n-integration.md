@@ -1,6 +1,6 @@
 # i18n Integration Tutorial
 
-This tutorial will show you how to integrate aiogram-cmds with aiogram's i18n system for multi-language bot support.
+This tutorial shows how to integrate aiogram-cmds with aiogram's i18n using `I18n` and `SimpleI18nMiddleware`.
 
 ## 🎯 What We'll Build
 
@@ -183,7 +183,7 @@ import asyncio
 import logging
 from aiogram import Bot, Dispatcher, types, F
 from aiogram.filters import Command
-from aiogram.utils.i18n import I18n, FSMI18nMiddleware, gettext as _
+from aiogram.utils.i18n import I18n, SimpleI18nMiddleware, gettext as _
 from aiogram_cmds import CommandScopeManager, CmdsConfig, CommandDef, ProfileDef, ScopeDef
 from aiogram_cmds import build_translator_from_i18n
 
@@ -199,7 +199,7 @@ dp = Dispatcher()
 
 # Set up i18n
 i18n = I18n(path="locales", default_locale="en", domain="messages")
-dp.message.middleware(FSMI18nMiddleware(i18n))
+dp.message.middleware(SimpleI18nMiddleware(i18n))
 
 # Create translator for aiogram-cmds
 translator = build_translator_from_i18n(i18n)

@@ -1,4 +1,96 @@
 """
+Tests for translator adapter: singular, plural, and explicit locale switching.
+"""
+
+import types
+
+import pytest
+
+from aiogram_cmds.translator import build_translator_from_i18n, noop_translator
+
+
+class DummyLocaleCtx:
+    def __init__(self, set_locale):
+        self._set_locale = set_locale
+
+    def __enter__(self):
+        self._set_locale(True)
+        return self
+
+    def __exit__(self, exc_type, exc, tb):
+        self._set_locale(False)
+
+
+class DummyI18n:
+    """Minimal stub emulating aiogram I18n surface used by adapter."""
+
+    def __init__(self, translations):
+        self._translations = translations  # {(locale, key): value}
+        self._current_locale = None
+
+    def with_locale(self, locale):
+        def set_locale(active):
+            self._current_locale = locale if active else None
+
+        return DummyLocaleCtx(set_locale)
+
+    def _get_locale(self):
+        # Used by adapter when locale is not explicitly provided
+        return self._current_locale or "en"
+
+    def gettext(self, key):
+        loc = self._get_locale()
+        return self._translations.get((loc, key), key)
+
+    def ngettext(self, singular, plural, n):
+        loc = self._get_locale()
+        # Use basic English-like rule: n == 1 -> singular, else plural
+        key = singular if n == 1 else plural
+        return self._translations.get((loc, key), key)
+
+
+def test_noop_translator_always_none():
+    assert noop_translator("any", locale="en") is None
+    assert noop_translator("any", locale=None) is None
+    assert noop_translator("one", plural="many", count=2) is None
+
+
+def test_singular_translation_with_explicit_locale():
+    i18n = DummyI18n({("ru", "hello"): "привет"})
+    t = build_translator_from_i18n(i18n)
+
+    assert t("hello", locale="ru") == "привет"
+    # Missing -> None
+    assert t("missing", locale="ru") is None
+
+
+def test_plural_translation_with_explicit_locale():
+    i18n = DummyI18n({
+        ("en", "{n} file") : "{n} file",
+        ("en", "{n} files"): "{n} files",
+        ("ru", "{n} file") : "{n} файл",
+        ("ru", "{n} files"): "{n} файла",
+    })
+    t = build_translator_from_i18n(i18n)
+
+    assert t("{n} file", plural="{n} files", count=1, locale="en") == "{n} file"
+    assert t("{n} file", plural="{n} files", count=3, locale="en") == "{n} files"
+    assert t("{n} file", plural="{n} files", count=1, locale="ru") == "{n} файл"
+    assert t("{n} file", plural="{n} files", count=3, locale="ru") == "{n} файла"
+
+
+def test_context_locale_resolution_without_explicit_locale():
+    i18n = DummyI18n({("es", "hi"): "hola"})
+    t = build_translator_from_i18n(i18n)
+
+    # No locale set in context -> fallback to default in DummyI18n ("en"), expect None
+    assert t("hi") is None
+
+    # Use with_locale manually to emulate middleware context
+    with i18n.with_locale("es"):
+        assert t("hi") == "hola"
+
+"""
 Unit tests for the translator module.
 """
 

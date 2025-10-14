@@ -18,7 +18,7 @@ import os
 
 from aiogram import Bot, Dispatcher, F, types
 from aiogram.filters import Command
-from aiogram.utils.i18n import FSMI18nMiddleware, I18n
+from aiogram.utils.i18n import I18n, SimpleI18nMiddleware
 from aiogram.utils.i18n import gettext as _
 
 from aiogram_cmds import (
@@ -45,7 +45,7 @@ dp = Dispatcher()
 
 # Set up i18n
 i18n = I18n(path="examples/locales", default_locale="en", domain="messages")
-dp.message.middleware(FSMI18nMiddleware(i18n))
+dp.message.middleware(SimpleI18nMiddleware(i18n))
 
 # Create translator for aiogram-cmds
 translator = build_translator_from_i18n(i18n)

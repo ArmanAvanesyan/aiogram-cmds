@@ -5,6 +5,28 @@ All notable changes to aiogram-cmds will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.1] - 2024-01-XX
+
+### Added
+- Enhanced i18n integration with aiogram best practices
+- Context-based locale switching in translator adapter using `I18n.with_locale()`
+- Pluralization support for translations via `plural` and `count` parameters
+- Babel workflow scripts for translation management (`tools/i18n/`)
+- Comprehensive command registration guide with examples
+- Unit tests for translator adapter with singular/plural and fallback behavior
+- Documentation for I18n setup and middleware usage
+
+### Changed
+- Updated translator protocol to support optional pluralization while maintaining backward compatibility
+- Improved middleware integration with `SimpleI18nMiddleware` instead of `FSMI18nMiddleware`
+- Enhanced documentation and examples to show proper aiogram I18n integration
+- Updated i18n tutorial to reflect best practices
+
+### Fixed
+- Locale resolution now uses aiogram's `with_locale` context instead of passing `locale` kwarg to `gettext`
+- Better fallback handling for missing translations
+- Improved error handling in translator adapter
+
 ## [Unreleased]
 
 ### Added
