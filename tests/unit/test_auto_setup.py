@@ -50,6 +50,11 @@ class TestSetupCommandsAuto:
         """Test setup with i18n instance."""
         mock_i18n = Mock()
         mock_i18n.gettext.return_value = "Translated text"
+        # Mock with_locale context manager
+        mock_context = Mock()
+        mock_context.__enter__ = Mock(return_value=mock_context)
+        mock_context.__exit__ = Mock(return_value=None)
+        mock_i18n.with_locale.return_value = mock_context
 
         manager = await setup_commands_auto(mock_bot, i18n_instance=mock_i18n)
 
@@ -371,6 +376,11 @@ class TestAutoSetupIntegration:
         # Mock i18n instance
         mock_i18n = Mock()
         mock_i18n.gettext.return_value = "Translated command"
+        # Mock with_locale context manager
+        mock_context = Mock()
+        mock_context.__enter__ = Mock(return_value=mock_context)
+        mock_context.__exit__ = Mock(return_value=None)
+        mock_i18n.with_locale.return_value = mock_context
 
         # Setup with all defaults
         manager = await setup_commands_auto(mock_bot, i18n_instance=mock_i18n)

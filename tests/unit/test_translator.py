@@ -2,11 +2,24 @@
 Tests for translator adapter: singular, plural, and explicit locale switching.
 """
 
-import types
-
-import pytest
+from unittest.mock import Mock
 
 from aiogram_cmds.translator import build_translator_from_i18n, noop_translator
+
+
+def create_mock_i18n(gettext_return=None, ngettext_return=None):
+    """Create a properly mocked aiogram I18n instance."""
+    mock_i18n = Mock()
+    mock_i18n.gettext.return_value = gettext_return
+    mock_i18n.ngettext.return_value = ngettext_return
+
+    # Mock with_locale context manager
+    mock_context = Mock()
+    mock_context.__enter__ = Mock(return_value=mock_context)
+    mock_context.__exit__ = Mock(return_value=None)
+    mock_i18n.with_locale.return_value = mock_context
+
+    return mock_i18n
 
 
 class DummyLocaleCtx:
@@ -66,16 +79,16 @@ def test_singular_translation_with_explicit_locale():
 
 def test_plural_translation_with_explicit_locale():
     i18n = DummyI18n({
-        ("en", "{n} file") : "{n} file",
+        ("en", "{n} file") : "1 file",
         ("en", "{n} files"): "{n} files",
-        ("ru", "{n} file") : "{n} файл",
+        ("ru", "{n} file") : "1 файл",
         ("ru", "{n} files"): "{n} файла",
     })
     t = build_translator_from_i18n(i18n)
 
-    assert t("{n} file", plural="{n} files", count=1, locale="en") == "{n} file"
+    assert t("{n} file", plural="{n} files", count=1, locale="en") == "1 file"
     assert t("{n} file", plural="{n} files", count=3, locale="en") == "{n} files"
-    assert t("{n} file", plural="{n} files", count=1, locale="ru") == "{n} файл"
+    assert t("{n} file", plural="{n} files", count=1, locale="ru") == "1 файл"
     assert t("{n} file", plural="{n} files", count=3, locale="ru") == "{n} файла"
 
 
@@ -89,17 +102,6 @@ def test_context_locale_resolution_without_explicit_locale():
     # Use with_locale manually to emulate middleware context
     with i18n.with_locale("es"):
         assert t("hi") == "hola"
-
-"""
-Unit tests for the translator module.
-"""
-
-from unittest.mock import Mock
-
-from aiogram_cmds.translator import (
-    build_translator_from_i18n,
-    noop_translator,
-)
 
 
 class TestTranslatorProtocol:
@@ -123,63 +125,64 @@ class TestBuildTranslatorFromI18n:
 
     def test_build_translator_success(self):
         """Test successful translation."""
-        mock_i18n = Mock()
-        mock_i18n.gettext.return_value = "Hello World"
+        mock_i18n = create_mock_i18n(gettext_return="Hello World")
 
         translator = build_translator_from_i18n(mock_i18n)
         result = translator("greeting", locale="en")
 
         assert result == "Hello World"
-        mock_i18n.gettext.assert_called_once_with("greeting", locale="en")
+        mock_i18n.with_locale.assert_called_once_with("en")
+        mock_i18n.gettext.assert_called_once_with("greeting")
 
     def test_build_translator_returns_none_for_empty_value(self):
         """Test that empty translation returns None."""
-        mock_i18n = Mock()
-        mock_i18n.gettext.return_value = ""
+        mock_i18n = create_mock_i18n(gettext_return="")
 
         translator = build_translator_from_i18n(mock_i18n)
         result = translator("empty.key", locale="en")
 
         assert result is None
-        mock_i18n.gettext.assert_called_once_with("empty.key", locale="en")
+        mock_i18n.with_locale.assert_called_once_with("en")
+        mock_i18n.gettext.assert_called_once_with("empty.key")
 
     def test_build_translator_returns_none_when_key_equals_value(self):
         """Test that when key equals value, returns None."""
-        mock_i18n = Mock()
-        mock_i18n.gettext.return_value = "missing.key"
+        mock_i18n = create_mock_i18n(gettext_return="missing.key")
 
         translator = build_translator_from_i18n(mock_i18n)
         result = translator("missing.key", locale="en")
 
         assert result is None
-        mock_i18n.gettext.assert_called_once_with("missing.key", locale="en")
+        mock_i18n.with_locale.assert_called_once_with("en")
+        mock_i18n.gettext.assert_called_once_with("missing.key")
 
     def test_build_translator_handles_exception(self):
         """Test that exceptions in gettext are handled gracefully."""
-        mock_i18n = Mock()
+        mock_i18n = create_mock_i18n()
         mock_i18n.gettext.side_effect = Exception("Translation error")
 
         translator = build_translator_from_i18n(mock_i18n)
         result = translator("error.key", locale="en")
 
         assert result is None
-        mock_i18n.gettext.assert_called_once_with("error.key", locale="en")
+        mock_i18n.with_locale.assert_called_once_with("en")
+        mock_i18n.gettext.assert_called_once_with("error.key")
 
     def test_build_translator_handles_none_return(self):
         """Test that None return from gettext is handled."""
-        mock_i18n = Mock()
-        mock_i18n.gettext.return_value = None
+        mock_i18n = create_mock_i18n(gettext_return=None)
 
         translator = build_translator_from_i18n(mock_i18n)
         result = translator("none.key", locale="en")
 
         assert result is None
-        mock_i18n.gettext.assert_called_once_with("none.key", locale="en")
+        mock_i18n.with_locale.assert_called_once_with("en")
+        mock_i18n.gettext.assert_called_once_with("none.key")
 
     def test_build_translator_with_different_locales(self):
         """Test translator with different locales."""
-        mock_i18n = Mock()
-        mock_i18n.gettext.side_effect = lambda key, locale: f"{key}_{locale}"
+        mock_i18n = create_mock_i18n()
+        mock_i18n.gettext.side_effect = lambda key: f"{key}_translated"
 
         translator = build_translator_from_i18n(mock_i18n)
 
@@ -187,35 +190,34 @@ class TestBuildTranslatorFromI18n:
         result_ru = translator("greeting", locale="ru")
         result_es = translator("greeting", locale="es")
 
-        assert result_en == "greeting_en"
-        assert result_ru == "greeting_ru"
-        assert result_es == "greeting_es"
+        assert result_en == "greeting_translated"
+        assert result_ru == "greeting_translated"
+        assert result_es == "greeting_translated"
 
+        assert mock_i18n.with_locale.call_count == 3
         assert mock_i18n.gettext.call_count == 3
 
     def test_build_translator_preserves_original_key(self):
         """Test that the original key is preserved in translation calls."""
-        mock_i18n = Mock()
-        mock_i18n.gettext.return_value = "Translated text"
+        mock_i18n = create_mock_i18n(gettext_return="Translated text")
 
         translator = build_translator_from_i18n(mock_i18n)
         result = translator("complex.key.with.dots", locale="en")
 
         assert result == "Translated text"
-        mock_i18n.gettext.assert_called_once_with("complex.key.with.dots", locale="en")
+        mock_i18n.with_locale.assert_called_once_with("en")
+        mock_i18n.gettext.assert_called_once_with("complex.key.with.dots")
 
     def test_build_translator_with_special_characters(self):
         """Test translator with special characters in key."""
-        mock_i18n = Mock()
-        mock_i18n.gettext.return_value = "Special chars"
+        mock_i18n = create_mock_i18n(gettext_return="Special chars")
 
         translator = build_translator_from_i18n(mock_i18n)
         result = translator("key-with-special_chars.123", locale="en")
 
         assert result == "Special chars"
-        mock_i18n.gettext.assert_called_once_with(
-            "key-with-special_chars.123", locale="en"
-        )
+        mock_i18n.with_locale.assert_called_once_with("en")
+        mock_i18n.gettext.assert_called_once_with("key-with-special_chars.123")
 
 
 class TestNoopTranslator:
@@ -257,8 +259,7 @@ class TestTranslatorIntegration:
 
     def test_translator_consistency(self):
         """Test that translator functions are consistent in their interface."""
-        mock_i18n = Mock()
-        mock_i18n.gettext.return_value = "Test translation"
+        mock_i18n = create_mock_i18n(gettext_return="Test translation")
 
         # Both should accept the same parameters
         built_translator = build_translator_from_i18n(mock_i18n)
@@ -273,7 +274,7 @@ class TestTranslatorIntegration:
 
     def test_translator_error_handling_consistency(self):
         """Test that both translators handle errors gracefully."""
-        mock_i18n = Mock()
+        mock_i18n = create_mock_i18n()
         mock_i18n.gettext.side_effect = Exception("Test error")
 
         built_translator = build_translator_from_i18n(mock_i18n)
@@ -287,31 +288,21 @@ class TestTranslatorIntegration:
 
     def test_translator_with_realistic_i18n_scenario(self):
         """Test translator with realistic i18n usage scenario."""
-        mock_i18n = Mock()
+        mock_i18n = create_mock_i18n()
 
-        def mock_gettext(key, locale):
+        def mock_gettext(key):
             translations = {
-                ("greeting", "en"): "Hello",
-                ("greeting", "ru"): "Привет",
-                ("greeting", "es"): "Hola",
-                ("farewell", "en"): "Goodbye",
-                ("farewell", "ru"): "До свидания",
-                ("farewell", "es"): "Adiós",
+                "greeting": "Hello",
+                "farewell": "Goodbye",
             }
-            return translations.get((key, locale), key)  # Return key if not found
+            return translations.get(key, key)  # Return key if not found
 
         mock_i18n.gettext.side_effect = mock_gettext
         translator = build_translator_from_i18n(mock_i18n)
 
         # Test existing translations
         assert translator("greeting", locale="en") == "Hello"
-        assert translator("greeting", locale="ru") == "Привет"
-        assert translator("greeting", locale="es") == "Hola"
+        assert translator("farewell", locale="en") == "Goodbye"
 
         # Test missing translations (should return None when key equals value)
         assert translator("missing.key", locale="en") is None
-
-        # Test farewell translations
-        assert translator("farewell", locale="en") == "Goodbye"
-        assert translator("farewell", locale="ru") == "До свидания"
-        assert translator("farewell", locale="es") == "Adiós"
