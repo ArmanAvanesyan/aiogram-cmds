@@ -16,11 +16,12 @@ import asyncio
 import logging
 import os
 
-from aiogram import Bot, Dispatcher, F, types
+from aiogram import Bot, Dispatcher, types
 from aiogram.filters import Command
 
 from aiogram_cmds.auto_setup import setup_commands_auto
 from aiogram_cmds.customize import CmdsConfig, CommandDef, ProfileDef, ScopeDef
+from aiogram_cmds.manager import CommandScopeManager
 from aiogram_cmds.policy import Flags, ProfileResolver
 
 # Configure logging
@@ -44,22 +45,22 @@ user_db = {
 
 def create_profile_resolver() -> ProfileResolver:
     """Create a custom profile resolver based on user data."""
-    
+
     def resolve_profile(flags: Flags) -> str:
-        user_id = getattr(flags, 'user_id', None)
-        
+        user_id = getattr(flags, "user_id", None)
+
         if not user_id or user_id not in user_db:
             return "guest"
-        
+
         user_data = user_db[user_id]
-        
+
         if user_data.get("is_admin", False):
             return "admin"
         elif user_data.get("is_registered", False):
             return "user"
         else:
             return "guest"
-    
+
     return resolve_profile
 
 
@@ -80,7 +81,17 @@ def create_custom_config() -> CmdsConfig:
         profiles={
             "guest": ProfileDef(include=["start", "help", "register"]),
             "user": ProfileDef(include=["start", "help", "profile", "vehicle"]),
-            "admin": ProfileDef(include=["start", "help", "profile", "vehicle", "admin", "users", "stats"]),
+            "admin": ProfileDef(
+                include=[
+                    "start",
+                    "help",
+                    "profile",
+                    "vehicle",
+                    "admin",
+                    "users",
+                    "stats",
+                ]
+            ),
         },
         scopes=[
             ScopeDef(scope="default", profile="guest"),
@@ -93,7 +104,7 @@ def create_custom_config() -> CmdsConfig:
 async def cmd_start(message: types.Message):
     """Handle /start command."""
     user_id = message.from_user.id
-    
+
     # Initialize user in database if not exists
     if user_id not in user_db:
         user_db[user_id] = {
@@ -101,9 +112,9 @@ async def cmd_start(message: types.Message):
             "is_admin": False,
             "has_vehicle": False,
         }
-    
+
     user_data = user_db[user_id]
-    
+
     if user_data["is_registered"]:
         if user_data["is_admin"]:
             await message.answer("👋 Welcome back, Admin!")
@@ -124,7 +135,7 @@ async def cmd_help(message: types.Message):
     """Handle /help command."""
     user_id = message.from_user.id
     user_data = user_db.get(user_id, {})
-    
+
     if user_data.get("is_admin", False):
         help_text = (
             "🔧 Admin Commands:\n"
@@ -151,7 +162,7 @@ async def cmd_help(message: types.Message):
             "• /help - Show this help\n"
             "• /register - Register your account"
         )
-    
+
     await message.answer(help_text)
 
 
@@ -159,23 +170,23 @@ async def cmd_help(message: types.Message):
 async def cmd_register(message: types.Message):
     """Handle /register command."""
     user_id = message.from_user.id
-    
+
     if user_id not in user_db:
         user_db[user_id] = {
             "is_registered": False,
             "is_admin": False,
             "has_vehicle": False,
         }
-    
+
     user_data = user_db[user_id]
-    
+
     if user_data["is_registered"]:
         await message.answer("✅ You're already registered!")
         return
-    
+
     # Simulate registration process
     user_data["is_registered"] = True
-    
+
     # Make first user an admin (for demo purposes)
     if len(user_db) == 1:
         user_data["is_admin"] = True
@@ -188,17 +199,17 @@ async def cmd_register(message: types.Message):
             "🎉 Registration successful!\n\n"
             "Your commands have been updated. Try /help to see new options!"
         )
-    
+
     # Update user commands with new profile
     from aiogram_cmds.manager import CommandScopeManager
-    
+
     # Get the manager instance (in real app, store this globally)
     manager = CommandScopeManager(
         bot=bot,
         config=create_custom_config(),
         profile_resolver=create_profile_resolver(),
     )
-    
+
     await manager.update_user_commands(
         user_id=user_id,
         is_registered=user_data["is_registered"],
@@ -213,13 +224,13 @@ async def cmd_profile(message: types.Message):
     """Handle /profile command."""
     user_id = message.from_user.id
     user_data = user_db.get(user_id, {})
-    
+
     if not user_data.get("is_registered", False):
         await message.answer("❌ You need to register first! Use /register")
         return
-    
+
     profile_type = "admin" if user_data.get("is_admin", False) else "user"
-    
+
     profile_text = (
         f"👤 Your Profile:\n"
         f"• ID: {user_id}\n"
@@ -228,7 +239,7 @@ async def cmd_profile(message: types.Message):
         f"• Has Vehicle: {'✅' if user_data.get('has_vehicle', False) else '❌'}\n"
         f"• Admin: {'✅' if user_data.get('is_admin', False) else '❌'}"
     )
-    
+
     await message.answer(profile_text)
 
 
@@ -237,24 +248,24 @@ async def cmd_vehicle(message: types.Message):
     """Handle /vehicle command."""
     user_id = message.from_user.id
     user_data = user_db.get(user_id, {})
-    
+
     if not user_data.get("is_registered", False):
         await message.answer("❌ You need to register first! Use /register")
         return
-    
+
     if user_data.get("has_vehicle", False):
         await message.answer("🚗 You already have a vehicle registered!")
     else:
         user_data["has_vehicle"] = True
         await message.answer("🚗 Vehicle registered successfully!")
-        
+
         # Update commands to reflect new vehicle status
         manager = CommandScopeManager(
             bot=bot,
             config=create_custom_config(),
             profile_resolver=create_profile_resolver(),
         )
-        
+
         await manager.update_user_commands(
             user_id=user_id,
             is_registered=user_data["is_registered"],
@@ -269,11 +280,11 @@ async def cmd_admin(message: types.Message):
     """Handle /admin command (admin only)."""
     user_id = message.from_user.id
     user_data = user_db.get(user_id, {})
-    
+
     if not user_data.get("is_admin", False):
         await message.answer("❌ Access denied. Admin privileges required.")
         return
-    
+
     admin_text = (
         "🔧 Admin Panel:\n"
         f"• Total users: {len(user_db)}\n"
@@ -281,7 +292,7 @@ async def cmd_admin(message: types.Message):
         f"• Users with vehicles: {sum(1 for u in user_db.values() if u.get('has_vehicle', False))}\n"
         f"• Admins: {sum(1 for u in user_db.values() if u.get('is_admin', False))}"
     )
-    
+
     await message.answer(admin_text)
 
 
@@ -290,21 +301,25 @@ async def cmd_users(message: types.Message):
     """Handle /users command (admin only)."""
     user_id = message.from_user.id
     user_data = user_db.get(user_id, {})
-    
+
     if not user_data.get("is_admin", False):
         await message.answer("❌ Access denied. Admin privileges required.")
         return
-    
+
     if not user_db:
         await message.answer("📝 No users found.")
         return
-    
+
     users_text = "👥 Users:\n"
     for uid, data in user_db.items():
-        status = "admin" if data.get("is_admin", False) else ("user" if data.get("is_registered", False) else "guest")
+        status = (
+            "admin"
+            if data.get("is_admin", False)
+            else ("user" if data.get("is_registered", False) else "guest")
+        )
         vehicle = "🚗" if data.get("has_vehicle", False) else "🚶"
         users_text += f"• {uid}: {status} {vehicle}\n"
-    
+
     await message.answer(users_text)
 
 
@@ -313,11 +328,11 @@ async def cmd_stats(message: types.Message):
     """Handle /stats command (admin only)."""
     user_id = message.from_user.id
     user_data = user_db.get(user_id, {})
-    
+
     if not user_data.get("is_admin", False):
         await message.answer("❌ Access denied. Admin privileges required.")
         return
-    
+
     stats_text = (
         "📊 Statistics:\n"
         f"• Total users: {len(user_db)}\n"
@@ -326,24 +341,24 @@ async def cmd_stats(message: types.Message):
         f"• Admins: {sum(1 for u in user_db.values() if u.get('is_admin', False))}\n"
         f"• Guests: {sum(1 for u in user_db.values() if not u.get('is_registered', False))}"
     )
-    
+
     await message.answer(stats_text)
 
 
 async def main():
     """Main function to run the bot."""
     logger.info("Starting profile-based bot...")
-    
+
     # Set up command management with custom configuration
-    manager = await setup_commands_auto(
+    await setup_commands_auto(
         bot=bot,
         config=create_custom_config(),
         profile_resolver=create_profile_resolver(),
     )
-    
+
     logger.info("Command management set up successfully!")
     logger.info("Bot is ready to handle messages...")
-    
+
     # Start polling
     await dp.start_polling(bot)
 

@@ -2,12 +2,9 @@
 Unit tests for the auto_setup module.
 """
 
-from typing import Any
 from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
-
-from aiogram import Bot
 
 from aiogram_cmds.auto_setup import (
     _try_import_i18n,
