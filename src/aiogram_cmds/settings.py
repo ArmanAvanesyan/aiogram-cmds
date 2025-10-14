@@ -10,7 +10,11 @@ from __future__ import annotations
 import logging
 from pathlib import Path
 
-import tomllib
+try:
+    import tomllib  # Python 3.11+
+except ImportError:
+    import tomli as tomllib  # Python 3.10 compatibility
+
 from pydantic import BaseModel, ConfigDict, field_validator
 
 
