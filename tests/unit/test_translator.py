@@ -78,12 +78,14 @@ def test_singular_translation_with_explicit_locale():
 
 
 def test_plural_translation_with_explicit_locale():
-    i18n = DummyI18n({
-        ("en", "{n} file") : "1 file",
-        ("en", "{n} files"): "{n} files",
-        ("ru", "{n} file") : "1 файл",
-        ("ru", "{n} files"): "{n} файла",
-    })
+    i18n = DummyI18n(
+        {
+            ("en", "{n} file"): "1 file",
+            ("en", "{n} files"): "{n} files",
+            ("ru", "{n} file"): "1 файл",
+            ("ru", "{n} files"): "{n} файла",
+        }
+    )
     t = build_translator_from_i18n(i18n)
 
     assert t("{n} file", plural="{n} files", count=1, locale="en") == "1 file"

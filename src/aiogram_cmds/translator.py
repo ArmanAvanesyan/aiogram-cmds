@@ -37,7 +37,11 @@ def build_translator_from_i18n(i18n_obj) -> Translator:
     """
 
     def _translate(
-        key: str, *, locale: str | None = None, plural: str | None = None, count: int | None = None
+        key: str,
+        *,
+        locale: str | None = None,
+        plural: str | None = None,
+        count: int | None = None,
     ) -> str | None:
         try:
             # Enter locale context if explicitly provided; otherwise rely on ambient context
@@ -57,7 +61,11 @@ def build_translator_from_i18n(i18n_obj) -> Translator:
 
 
 def noop_translator(
-    key: str, *, locale: str | None = None, plural: str | None = None, count: int | None = None
+    key: str,
+    *,
+    locale: str | None = None,
+    plural: str | None = None,
+    count: int | None = None,
 ) -> str | None:
     """No-op translator that always returns None."""
     return None
