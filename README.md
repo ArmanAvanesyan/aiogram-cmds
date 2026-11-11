@@ -1,3 +1,5 @@
+> **Repository migrated:** Active development and independent `aiogram-cmds` releases now live in [aiogram-kit](https://github.com/ArmanAvanesyan/aiogram-kit/tree/main/packages/aiogram-cmds). Historical PRs, releases and assets remain here. See the [migration map](https://armanavanesyan.github.io/aiogram-kit/legacy-links/).
+
 # aiogram-cmds
 
 [![CI](https://github.com/ArmanAvanesyan/aiogram-cmds/workflows/CI/badge.svg)](https://github.com/ArmanAvanesyan/aiogram-cmds/actions)
